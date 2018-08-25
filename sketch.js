@@ -1,10 +1,9 @@
-var inputcw;
+var outputcw;
 var timeIni1;
 var timeFin1;
 var timeIni0;
 var timeIni0;
 var auxTime=0;
-var area;
 var globalFlagHighIni=false;
 var globalIniHigh=0;
 var globalFlagLowIni=false;
@@ -21,6 +20,9 @@ var globalFlagHighIniMicrofono=false;
 var globalIniHighMicrofono=0;
 var globalFlagLowIniMicrofono=false;
 var globalIniLowMicrofono=0;
+
+var areaRX;
+var areaTX;
 
 
 function pulseInHighMicrofono(){ 
@@ -121,7 +123,7 @@ function pulseInLow(){
 
 function AddByteBufferRead(dato){
  bufferByteRead[contByteRead]=dato;
- area.elt.placeholder+=bufferByteRead[contByteRead]; 
+ areaRX.elt.placeholder+=bufferByteRead[contByteRead]; 
  contByteRead++; 
 }
 
@@ -204,19 +206,30 @@ function pollMicrofono(){
 
 function setup(){
   // put setup code here
-  createCanvas(640, 480);  
+  createCanvas(640,480);  
+    
+  areaRX=createElement('textarea');
+  areaRX.position(10,65);
+  areaRX.style('width','600px');
+  areaRX.style('height','300px');
+  areaRX.elt.placeholder='';
+        
+  outputcw=createInput();
+  outputcw.position(10,375); 
+  outputcw.style('size',260);
+  outputcw.style('width','460px');  
   
-  inputcw = createInput();
-  inputcw.position(20, 65);
-  var col = color(25, 23, 200, 50);
-  inputcw.style('background-color', col);
-  inputcw.style('size', 60);
+  btnOutput=createButton('Send');
+  btnOutput.position(480,outputcw.y);
+  //btnOutput.mousePressed(greet);
   
-  area = createElement('textarea');
-  area.elt.placeholder = '';
+  areaTX=createElement('textarea');
+  areaTX.position(400,405);
+  areaTX.elt.placeholder='';  
+  
   background(0);
   
-  mic = new p5.AudioIn()
+  mic=new p5.AudioIn()
   mic.start();
 }
 
