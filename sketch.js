@@ -24,6 +24,18 @@ var globalIniLowMicrofono=0;
 var areaRX;
 var areaTX;
 
+var oscBeep;
+var oscSilent;
+var enviaSMS=false;
+var contEnviaSMS=0;
+
+
+function byteString(n){
+ if (n<0 || n>255 || n%1!==0){
+  throw new Error(n+'does not fit in a byte');
+ }
+ return('000000000'+n.toString(2)).substr(-8);
+}
 
 function pulseInHighMicrofono(){ 
  micLevel=mic.getLevel();
@@ -203,6 +215,53 @@ function pollMicrofono(){
  }
 }
 
+function SendSMS(){
+ //alert(outputcw.value());
+ 
+   /*if (enviaSMS==true)
+   {
+ 	oscBeep.start();
+	oscBeep.stop(0.500);
+   }*/
+	/*oscSilent.start();
+	oscSilent.stop(1);
+ 	oscBeep.start();
+	oscBeep.stop(1);	
+		oscSilent.start();
+	oscSilent.stop(1);
+	oscBeep.start();
+	oscBeep.stop(1);
+		oscSilent.start();
+	oscSilent.stop(1);*/
+	/*
+ var cadSMS=outputcw.value();
+ var cadByte="";
+ cadSMS="hola";
+ for (var i=0;i<cadSMS.length;i++){  
+  cadByte=byteString(cadSMS.charCodeAt(i));
+  console.log(cadByte);
+  for (var j=0;j<8;j++){
+   console.log(cadByte.charAt(j));
+   if (cadByte.charAt(j)=="1"){
+	oscBeep.start();
+	oscBeep.stop(0.500);
+	oscSilent.start();
+	oscSilent.stop(0.500);
+	oscBeep.start();
+	oscBeep.stop(0.500);
+   }	
+   else{
+	oscSilent.start();
+	oscSilent.stop(0.500);
+   }   
+  }
+ }  */
+}
+
+function SetSendSMSTrue()
+{
+ enviaSMS=true;
+}
 
 function setup(){
   // put setup code here
@@ -221,7 +280,7 @@ function setup(){
   
   btnOutput=createButton('Send');
   btnOutput.position(480,outputcw.y);
-  //btnOutput.mousePressed(greet);
+  btnOutput.mousePressed(SetSendSMSTrue);
   
   areaTX=createElement('textarea');
   areaTX.position(400,405);
@@ -231,6 +290,18 @@ function setup(){
   
   mic=new p5.AudioIn()
   mic.start();
+  
+  
+  
+  //osc = new p5.TriOsc();
+  oscBeep=new p5.SinOsc();
+  oscBeep.freq(800); //800 hz CW tono
+  oscBeep.amp(1);   
+  
+  oscSilent=new p5.SinOsc();
+  oscSilent.freq(0); //0 hz CW tono
+  oscSilent.amp(1);   
+  
 }
 
 function draw(){
@@ -241,4 +312,5 @@ function draw(){
   
  pollRaton();
  pollMicrofono();
+ SendSMS();
 }
