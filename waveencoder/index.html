@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta name="viewport" width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0>
+  <style> body {padding: 0; margin: 0;} </style>
+  <script type='text/javascript' src='wavencoder.js'></script>
+   <script type='text/javascript'>
+  var samples = [];
+  //for (var t = 0; t < 22050; ++t) {
+  for (var t = 0; t < 44100; ++t) {
+    //samples[t] = 2 * Math.random() - 1;  // in the interval [-1,1]
+	samples[t] = 2 * Math.sin(t);  // in the interval [-1,1]
+  }
+  var datauri = WavEncoder.encode(samples);
+  var audio = new Audio(datauri);
+  //document.onload(function(){ audio.play(); });
+  window.onload = function(){ audio.play(); }
+  audio.play();
+  </script>
+ </head>
+ <body>
+
+ </body>
+</html>  
+</script>
