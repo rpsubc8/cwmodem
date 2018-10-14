@@ -42,6 +42,10 @@ var sampleBufferSend=[];
 var contSampleBufferSend=0;
 
 var globalBeginTrama=false;
+var globalBeginPTT=false;
+
+var global_longitudSMS=0;
+var global_crcSMS=0;
 
 
 function byteString(n){
@@ -147,9 +151,42 @@ function pulseInLow(){
  }
 }
 
+function decodeRTTYtoASCII(valor){
+  var codeASCII=32;
+  var auxChar='';
+  switch(valor){
+   case 27:codeASCII=32;break;//Espacio blanco
+   case 28:codeASCII=44;break;//Punto
+   case 29:codeASCII=46;break;//Coma
+   case 31:codeASCII=58;break;//Dos puntos
+   case 30:codeASCII=60;break;//Interrogacion
+   default:
+    if ((valor>=0) && (valor<=24)){codeASCII=valor+65;}//letras mayusculas    
+    else{codeASCII=27;}
+  }
+ auxChar= String.fromCharCode(codeASCII);
+ return auxChar;	
+}
+
+function ResetReciveSMS(){
+ contByteRead=0;
+ globalBeginTrama=false;
+ globalBeginPTT=false;			
+}
+
 function AddByteBufferRead(dato){
+ //":::A:"+String.fromCharCode(longitud,codCRC)+cadena+":";
  bufferByteRead[contByteRead]=dato;
- areaRX.elt.placeholder+=bufferByteRead[contByteRead]+"|"; 
+ switch(contByteRead)
+ {
+  case 5:global_longitudSMS=bufferByteRead[contByteRead];break;
+  case 6:global_crcSMS=bufferByteRead[contByteRead];break;
+  default: if((contByteRead>6)&&(bufferByteRead[contByteRead]==31)){
+	        areaRX.elt.placeholder+='|EOF|';
+            ResetReciveSMS();
+           }	  
+ }
+ areaRX.elt.placeholder+=decodeRTTYtoASCII(bufferByteRead[contByteRead]); 
  contByteRead++; 
 }
 
@@ -158,18 +195,21 @@ function AddBitBufferRead(dato,totalBits){
  bufferBitRead[contBitRead]=dato; 
  contBitRead++; 
  //if (contBitRead>7){
- if (globalBeginTrama==true){
-  if (contBitRead>=totalBits){ 
-   contBitRead=0;  
-   if (totalBits==8){
-    auxByte=(bufferBitRead[7]*128)+(bufferBitRead[6]*64)+(bufferBitRead[5]*32)+(bufferBitRead[4]*16)+(bufferBitRead[3]*8)+(bufferBitRead[2]*4)+(bufferBitRead[1]*2)+(bufferBitRead[0]);
-   }
-   else{
-    if (totalBits==5){
-     auxByte=(bufferBitRead[4]*16)+(bufferBitRead[3]*8)+(bufferBitRead[2]*4)+(bufferBitRead[1]*2)+(bufferBitRead[0]);
+ if (globalBeginPTT==true)
+ {
+  if (globalBeginTrama==true){
+   if (contBitRead>=totalBits){ 
+    contBitRead=0;  
+    if (totalBits==8){
+     auxByte=(bufferBitRead[7]*128)+(bufferBitRead[6]*64)+(bufferBitRead[5]*32)+(bufferBitRead[4]*16)+(bufferBitRead[3]*8)+(bufferBitRead[2]*4)+(bufferBitRead[1]*2)+(bufferBitRead[0]);
     }
+    else{
+     if (totalBits==5){
+      auxByte=(bufferBitRead[4]*16)+(bufferBitRead[3]*8)+(bufferBitRead[2]*4)+(bufferBitRead[1]*2)+(bufferBitRead[0]);
+     }
+    }
+    AddByteBufferRead(auxByte);
    }
-   AddByteBufferRead(auxByte);
   }
  }
 }
@@ -237,26 +277,39 @@ function pollMicrofono(){
  
  auxTimeMicrofono= pulseInHighMicrofono();
  if (auxTimeMicrofono>-1){
-  total1s=(auxTimeMicrofono/100);  
+  total1s=Math.round((auxTimeMicrofono/100));
+  console.log('|1-'+total1s);
   for (i=1;i<=total1s;i++){
    //area.elt.placeholder += '1';
    stroke(255,255,255);
    rect(x,10,1,30);
    x++;
-   if (globalBeginTrama==true){
-	AddBitBufferRead(1,5);
+   if (globalBeginPTT==false){
+	globalBeginPTT=true;//posible comienzo de transmision
+	areaRX.elt.placeholder+='PTT'+total1s.toString()+'-';
+   }   	
+   else{
+	if (globalBeginTrama==true){	
+	 AddBitBufferRead(1,5);	
+	}
    }
   }  
  }
  
  auxTimeMicrofono= pulseInLowMicrofono();
  if (auxTimeMicrofono>-1){
-  total0s=(auxTimeMicrofono/100);
+  total0s=Math.round((auxTimeMicrofono/100));
+  console.log('|0-'+total0s);
   if (total0s>=4){
    if (globalBeginTrama==false){
-    globalBeginTrama=true;//Posible comienzo trama
-    areaRX.elt.placeholder+='#';
-	procesar=false;
+	if (globalBeginPTT==true){	
+     globalBeginTrama=true;//Posible comienzo trama
+     areaRX.elt.placeholder+='#'+total0s.toString()+'-';
+	 procesar=false;
+	}
+   }
+   else{
+	procesar=true;
    }
   }
   else{
@@ -375,26 +428,22 @@ function EnviaRTTY5Aire(cadena){
  var codeASCII=0;
  var i=0;
  var j=0;
- var longitud=0;
- var codCRC=30;
+ var longitud=65;
+ var codCRC=65; 
  
  contSampleBufferSend=0; 
  
- longitud=cadena.length;
- cadena=":::B:"+String.fromCharCode(longitud,codCRC)+cadena+":"; //Meto inicio trama y fin trama
- for (i=0;i<(cadena.length-1);i++){  
+ //longitud=cadena.length;
+ //cadena=":::A:"+String.fromCharCode(longitud,codCRC)+cadena+":"; //Meto inicio trama y fin trama
+ cadena=":::A:"+String.fromCharCode(longitud,codCRC)+cadena+":";
+ for (i=0;i<(cadena.length);i++){  
   codeASCII=cadena.charCodeAt(i);
   switch(codeASCII){
-   case 32:codeASCII=27;//Espacio blanco
-    break;
-   case 44:codeASCII=28;//Punto
-    break;
-   case 46:codeASCII=29;//Coma
-	break;
-   case 58:codeASCII=31//Dos puntos
-    break;
-   case 63:codeASCII=30;//Interrogacion
-    break;
+   case 32:codeASCII=27;break;//Espacio blanco
+   case 44:codeASCII=28;break;//Punto
+   case 46:codeASCII=29;break;//Coma
+   case 58:codeASCII=31;break;//Dos puntos
+   case 63:codeASCII=30;break;//Interrogacion
    default:	      
     if ((codeASCII>=65) && (codeASCII<=90)){codeASCII=codeASCII-65;}//letras mayusculas
     else{
